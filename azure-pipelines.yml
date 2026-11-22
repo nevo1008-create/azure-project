@@ -20,7 +20,7 @@ steps:
     command: publish
     publishDirectory: '$(Build.ArtifactStagingDirectory)/publish'
     feedsToUsePublish: internal
-    vstsFeedPublish: 'hello-world-feed'
+    vstsFeedPublish: 'nevo/hello-world-feed'
     vstsFeedPackagePublish: 'hello-world'
     versionOption: custom
     versionPublish: '1.0.0'
