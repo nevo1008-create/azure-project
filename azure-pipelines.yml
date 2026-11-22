@@ -1,5 +1,8 @@
 trigger:
-- main
+  branches:
+    include:
+      - main
+      - develop
 
 pool:
   vmImage: ubuntu-latest
@@ -11,8 +14,36 @@ steps:
 - script: dotnet restore HelloWorld/HelloWorld.csproj
   displayName: Restore dependencies
 
+
+# Prepare SonarQube only on develop
+- task: SonarCloudPrepare@3
+  displayName: Prepare SonarQube analysis
+  condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
+  inputs:
+    SonarCloud: 'nevo-token-sonar'
+    organization: 'nevo1008-create'
+    scannerMode: 'dotnet'
+    projectKey: 'nevo1008-create_azure-project'
+    projectName: 'azure-project'
+
+
 - script: dotnet build HelloWorld/HelloWorld.csproj --configuration Release
   displayName: Build application
+
+
+# Analyze only on develop
+- task: SonarCloudAnalyze@3
+  displayName: Run SonarQube analysis
+  condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
+
+
+# Publish SonarQube result only on develop
+- task: SonarCloudPublish@3
+  displayName: Publish SonarQube result
+  condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
+  inputs:
+    pollingTimeoutSec: '300'
+
 
 - script: echo "Package version is $(packageVersion)"
   displayName: Print package version
