@@ -32,22 +32,50 @@ steps:
   condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
   displayName: Run SonarQube analysis
 
-# SonarQube Quality Gate - main only
+# Quality Gate - main only
 - task: SonarCloudPublish@4.4.0
   condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
   displayName: Publish Quality Gate
   inputs:
     pollingTimeoutSec: '300'
 
-# Create deployment files - develop only
+# -------------------------
+# MAIN - NuGet package
+# -------------------------
+
+# Create NuGet package
+- script: |
+    dotnet pack HelloWorld/HelloWorld.csproj \
+      --configuration Release \
+      --no-build \
+      -p:PackageVersion=$(packageVersion) \
+      --output $(Build.ArtifactStagingDirectory)/nuget
+  condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
+  displayName: Create NuGet package
+
+# Upload NuGet package to Azure Artifacts
+- task: NuGetCommand@2
+  condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
+  displayName: Upload NuGet to Azure Artifacts
+  inputs:
+    command: push
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/nuget/*.nupkg'
+    nuGetFeedType: internal
+    publishVstsFeed: 'nevo/hello-world-feed'
+
+# -------------------------
+# DEVELOP - Universal Package
+# -------------------------
+
+# Create deployment files
 - script: dotnet publish HelloWorld/HelloWorld.csproj --configuration Release --output $(Build.ArtifactStagingDirectory)/publish
   condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
   displayName: Publish application
 
-# Upload package - develop only
+# Upload Universal Package
 - task: UniversalPackages@0
   condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
-  displayName: Upload to Azure Artifacts
+  displayName: Upload Universal Package
   inputs:
     command: publish
     publishDirectory: '$(Build.ArtifactStagingDirectory)/publish'
