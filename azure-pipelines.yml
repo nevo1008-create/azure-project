@@ -7,12 +7,13 @@ pool:
 
 variables:
   packageVersion: '1.0.$(Build.BuildId)'
+  packageName: '$(Build.SourceBranchName)_$(packageVersion)'
 
 steps:
 
 # SonarQube - main only
 - task: SonarCloudPrepare@4.4.0
-  condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
+  condition: eq(variables['Build.SourceBranchName'], 'main')
   inputs:
     SonarCloud: 'nevo-token-sonar'
     organization: 'nevo1008-create'
@@ -21,66 +22,62 @@ steps:
 
 # Restore - both branches
 - script: dotnet restore HelloWorld/HelloWorld.csproj
-  displayName: Restore dependencies
+  displayName: Restore
 
 # Build - both branches
 - script: dotnet build HelloWorld/HelloWorld.csproj --configuration Release
-  displayName: Build application
+  displayName: Build
 
-# SonarQube analysis - main only
+# SonarQube - main only
 - task: SonarCloudAnalyze@4.4.0
-  condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
-  displayName: Run SonarQube analysis
+  condition: eq(variables['Build.SourceBranchName'], 'main')
+  displayName: SonarQube Analysis
 
-# Quality Gate - main only
 - task: SonarCloudPublish@4.4.0
-  condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
-  displayName: Publish Quality Gate
+  condition: eq(variables['Build.SourceBranchName'], 'main')
+  displayName: Quality Gate
   inputs:
     pollingTimeoutSec: '300'
 
-# -------------------------
-# MAIN - NuGet Package
-# -------------------------
+# Print version and package name
+- script: |
+    echo "Version: $(packageVersion)"
+    echo "Package name: $(packageName)"
+  displayName: Print version
 
-# Create NuGet package
+# NuGet - main only
 - script: |
     dotnet pack HelloWorld/HelloWorld.csproj \
       --configuration Release \
       --no-build \
+      -p:PackageId=$(packageName) \
       -p:PackageVersion=$(packageVersion) \
       --output $(Build.ArtifactStagingDirectory)/nuget
-  condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
-  displayName: Create NuGet package
+  condition: eq(variables['Build.SourceBranchName'], 'main')
+  displayName: Create NuGet
 
-# Upload NuGet package
 - task: DotNetCoreCLI@2
-  condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
-  displayName: Upload NuGet to Azure Artifacts
+  condition: eq(variables['Build.SourceBranchName'], 'main')
+  displayName: Upload NuGet
   inputs:
     command: push
     packagesToPush: '$(Build.ArtifactStagingDirectory)/nuget/*.nupkg'
     nuGetFeedType: internal
     publishVstsFeed: 'nevo/hello-world-feed'
 
-# -------------------------
-# DEVELOP - Universal Package
-# -------------------------
-
-# Create deployment files
+# Universal Package - develop only
 - script: dotnet publish HelloWorld/HelloWorld.csproj --configuration Release --output $(Build.ArtifactStagingDirectory)/publish
-  condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
-  displayName: Publish application
+  condition: eq(variables['Build.SourceBranchName'], 'develop')
+  displayName: Publish
 
-# Upload Universal Package
 - task: UniversalPackages@0
-  condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
+  condition: eq(variables['Build.SourceBranchName'], 'develop')
   displayName: Upload Universal Package
   inputs:
     command: publish
     publishDirectory: '$(Build.ArtifactStagingDirectory)/publish'
     feedsToUsePublish: internal
     vstsFeedPublish: 'nevo/hello-world-feed'
-    vstsFeedPackagePublish: 'hello-world'
+    vstsFeedPackagePublish: '$(packageName)'
     versionOption: custom
     versionPublish: '$(packageVersion)'
