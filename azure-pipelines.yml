@@ -40,7 +40,7 @@ steps:
     pollingTimeoutSec: '300'
 
 # -------------------------
-# MAIN - NuGet package
+# MAIN - NuGet Package
 # -------------------------
 
 # Create NuGet package
@@ -53,8 +53,8 @@ steps:
   condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
   displayName: Create NuGet package
 
-# Upload NuGet package to Azure Artifacts
-- task: NuGetCommand@2
+# Upload NuGet package
+- task: DotNetCoreCLI@2
   condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
   displayName: Upload NuGet to Azure Artifacts
   inputs:
