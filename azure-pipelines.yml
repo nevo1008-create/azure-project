@@ -10,43 +10,43 @@ variables:
 
 steps:
 
-# SonarQube - develop only
+# SonarQube - main only
 - task: SonarCloudPrepare@4.4.0
-  condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
+  condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
   inputs:
     SonarCloud: 'nevo-token-sonar'
     organization: 'nevo1008-create'
     scannerMode: 'dotnet'
     projectKey: 'nevo1008-create_azure-project'
 
-# Restore
+# Restore - both branches
 - script: dotnet restore HelloWorld/HelloWorld.csproj
   displayName: Restore dependencies
 
-# Build
+# Build - both branches
 - script: dotnet build HelloWorld/HelloWorld.csproj --configuration Release
   displayName: Build application
 
-# SonarQube - develop only
+# SonarQube analysis - main only
 - task: SonarCloudAnalyze@4.4.0
-  condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
+  condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
   displayName: Run SonarQube analysis
 
-# SonarQube Quality Gate - develop only
+# SonarQube Quality Gate - main only
 - task: SonarCloudPublish@4.4.0
-  condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
+  condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
   displayName: Publish Quality Gate
   inputs:
     pollingTimeoutSec: '300'
 
-# Create deployment files - main only
+# Create deployment files - develop only
 - script: dotnet publish HelloWorld/HelloWorld.csproj --configuration Release --output $(Build.ArtifactStagingDirectory)/publish
-  condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
+  condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
   displayName: Publish application
 
-# Upload package - main only
+# Upload package - develop only
 - task: UniversalPackages@0
-  condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
+  condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
   displayName: Upload to Azure Artifacts
   inputs:
     command: publish
